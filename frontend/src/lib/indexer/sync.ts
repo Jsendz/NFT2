@@ -22,9 +22,13 @@ const MARKET = process.env.NEXT_PUBLIC_MARKETPLACE_ADDRESS as Address;
 const DEPLOY_BLOCK = process.env.INDEXER_DEPLOY_BLOCK ? BigInt(process.env.INDEXER_DEPLOY_BLOCK) : 0n;
 const CONFIRMATIONS = process.env.INDEXER_CONFIRMATIONS ? BigInt(process.env.INDEXER_CONFIRMATIONS) : 12n;
 const REORG_BACKTRACK = process.env.INDEXER_REORG_BACKTRACK ? BigInt(process.env.INDEXER_REORG_BACKTRACK) : 200n;
-const CHUNK = 5_000n;
+// Max blocks per request; small default works across strict RPCs
+const MAX_BLOCK_SPAN = process.env.INDEXER_MAX_BLOCK_SPAN ? BigInt(process.env.INDEXER_MAX_BLOCK_SPAN) : 100n;
 
-const client = createPublicClient({ chain: sepolia, transport: http() });
+const client = createPublicClient({
+  chain: sepolia,
+  transport: http(process.env.RPC_URL || undefined),
+});
 
 function toTopics(topics?: readonly Hex[]): [] | [`0x${string}`, ...`0x${string}`[]] {
   if (!topics || topics.length === 0) return [];
@@ -37,7 +41,6 @@ function pick<T extends string>(obj: any, key: T, idx: number) {
 }
 
 export async function runSync(): Promise<{ scanned: number; from: bigint; to: bigint; safeTip: bigint }> {
-  // Only one sync at a time
   const gotLock = await acquireLock(60);
   if (!gotLock) return { scanned: 0, from: 0n, to: 0n, safeTip: 0n };
 
@@ -46,17 +49,34 @@ export async function runSync(): Promise<{ scanned: number; from: bigint; to: bi
     const safeTip = tip > CONFIRMATIONS ? tip - CONFIRMATIONS : 0n;
     if (safeTip === 0n) return { scanned: 0, from: 0n, to: 0n, safeTip };
 
-    const last = await getLastBlock(); // last finalized block we’ve processed
+    const last = await getLastBlock();
     let from = last > 0n ? last - REORG_BACKTRACK : (DEPLOY_BLOCK || safeTip);
     if (from < DEPLOY_BLOCK) from = DEPLOY_BLOCK;
     if (from > safeTip) return { scanned: 0, from, to: safeTip, safeTip };
 
     let scanned = 0;
+    let span = MAX_BLOCK_SPAN;
 
     while (from <= safeTip) {
-      const to = from + CHUNK - 1n <= safeTip ? from + CHUNK - 1n : safeTip;
+      let to = from + span - 1n;
+      if (to > safeTip) to = safeTip;
 
-      const logs = await client.getLogs({ address: MARKET, fromBlock: from, toBlock: to });
+      let logs: any[] = [];
+      try {
+        logs = await client.getLogs({ address: MARKET, fromBlock: from, toBlock: to });
+      } catch (err: any) {
+        const msg = String(err?.message || err || "");
+        const code = (err && typeof err === "object" && "code" in err) ? (err as any).code : undefined;
+        // dRPC & some RPCs respond with "exceeds max results" or -32602 for too-large ranges
+        if (msg.includes("exceeds max results") || msg.includes("Invalid parameters") || code === -32602) {
+          // shrink the span and retry this window
+          span = span > 1n ? span / 2n : 1n;
+          if (span < 10n) span = 10n; // don't go too low
+          continue;
+        }
+        throw err; // different error → bubble up
+      }
+
       for (const log of logs) {
         try {
           const parsed = decodeEventLog({
@@ -85,13 +105,15 @@ export async function runSync(): Promise<{ scanned: number; from: bigint; to: bi
             await removeActive(String(listingId));
           }
         } catch {
-          // ignore non-Marketplace logs
+          // ignore non-decodable logs
         }
       }
 
       await setLastBlock(to);
       scanned += Number(to - from + 1n);
       from = to + 1n;
+      // after a successful window, reset span to max
+      span = MAX_BLOCK_SPAN;
     }
 
     return { scanned, from: await getLastBlock(), to: safeTip, safeTip };
