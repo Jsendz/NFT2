@@ -22,10 +22,9 @@ export default function Header() {
             NFT Market
           </span>
         </a>
+        <Nav href="/mint" label="Mint"  />
           <Nav href="/list" label="List"  />
           <Nav href="/mine" label="My listings"  />
-          <Nav href="/fill" label="Fill listing"  />
-          <Nav href="/sign" label="Sign listing"  />
 
         </nav>
         <ConnectButton />
