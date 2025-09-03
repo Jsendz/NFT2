@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <Header />
           <ToastProvider />
-          <main className="max-w-5xl mx-auto p-4" >
+          <main className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50 text-gray-900" >
           {children}
           </main>
           </Providers>

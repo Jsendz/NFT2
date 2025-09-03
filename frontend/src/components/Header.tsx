@@ -14,14 +14,18 @@ export default function Header() {
     </Link>
   );
   return (
-    <header className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b">
-      <div className="max-w-5xl mx-auto flex items-center justify-between p-3">
+    <header className="border-b bg-white/70 backdrop-blur sticky top-0 z-40">
+      <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
         <nav className="flex gap-2 text-sm">
-          <Nav href="/" label="Marketplace" />
-          <Nav href="/list" label="List" />
-          <Nav href="/mine" label="My listings" />
-          <Nav href="/fill" label="Fill listing" />
-          <Nav href="/sign" label="Sign listing" />
+          <a href="/" className="font-semibold tracking-tight">
+          <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+            NFT Market
+          </span>
+        </a>
+          <Nav href="/list" label="List"  />
+          <Nav href="/mine" label="My listings"  />
+          <Nav href="/fill" label="Fill listing"  />
+          <Nav href="/sign" label="Sign listing"  />
 
         </nav>
         <ConnectButton />

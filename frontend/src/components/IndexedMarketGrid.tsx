@@ -204,7 +204,7 @@ function Card({ row, onDone }: { row: Row; onDone: () => void }) {
   }, [isSuccess, onDone]);
 
   return (
-    <div className="p-4 border rounded-2xl">
+    <div className="p-4 rounded-2xl border bg-white/70 backdrop-blur shadow-sm hover:shadow-md transition hover:-translate-y-0.5">
       <div className="aspect-square grid place-items-center bg-gray-100 rounded-xl overflow-hidden">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -230,7 +230,7 @@ function Card({ row, onDone }: { row: Row; onDone: () => void }) {
         <button
           onClick={onBuy}
           disabled={mining}
-          className="mt-3 px-4 py-2 rounded-xl bg-black text-white hover:opacity-90 disabled:opacity-50"
+          className="mt-3 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow hover:opacity-90"
         >
           {mining ? "Confirming…" : "Buy"}
         </button>
@@ -246,7 +246,7 @@ function Card({ row, onDone }: { row: Row; onDone: () => void }) {
             <button
               onClick={onUpdatePrice}
               disabled={mining}
-              className="px-4 py-2 rounded-xl bg-black text-white hover:opacity-90 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow hover:opacity-90"
             >
               Update price
             </button>
